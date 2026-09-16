@@ -15,19 +15,40 @@ if(!dir.exists(out.dir)) {
   dir.create(out.dir, recursive = TRUE)
 }
 
+#Diagnosis abbreviation to search for. Only "AML" and "ALL" are supported for now.
+diagnosis <- "AML"
+
+#Map of supported diagnosis abbreviations to their full names:
+diagnosis.map <- c(
+  AML = "acute myeloid leukemia",
+  ALL = "acute lymphocytic leukemia"
+)
+
 out.path <- file.path(
   out.dir,
-  paste0("AML_GEO_candidates_datasets_", Sys.Date(), ".xlsx")
+  paste0(diagnosis, "_GEO_candidates_datasets_", Sys.Date(), ".xlsx")
 )
+
+#Build the search terms for a given diagnosis abbreviation:
+build_query_strings <- function(abbreviation, diagnosis.map) {
+  if (!abbreviation %in% names(diagnosis.map)) {
+    stop(
+      "Unsupported diagnosis '", abbreviation, "'. Supported values: ",
+      paste(names(diagnosis.map), collapse = ", ")
+    )
+  }
+  full.name <- diagnosis.map[[abbreviation]]
+  c(
+    paste(abbreviation, "DMSO"),
+    paste0("\"", full.name, "\" DMSO"),
+    paste(abbreviation, "vehicle"),
+    paste0("\"", full.name, "\" vehicle")
+  )
+}
 
 #The Search Terms
 
-query.strings <- c(
-  "AML DMSO",
-  "\"acute myeloid leukemia\" DMSO",
-  "AML vehicle",
-  "\"acute myeloid leukemia\" vehicle"
-)
+query.strings <- build_query_strings(diagnosis, diagnosis.map)
 
 #Optional NCBI API Key 
 ncbi.api.key <- Sys.getenv("NCBI_API_KEY")
