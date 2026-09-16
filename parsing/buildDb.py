@@ -22,6 +22,13 @@ def parse_tsv_line(line):
     return next(csv.reader([line], delimiter="\t", quotechar='"'))
 
 
+def to_float(value):
+    try:
+        return float(value)
+    except ValueError:
+        return None
+
+
 def parse_series_matrix(path):
     with gzip.open(path, "rt", encoding="utf-8", errors="replace") as f:
         lines = f.readlines()
@@ -67,9 +74,7 @@ def parse_series_matrix(path):
             continue
         fields = parse_tsv_line(line)
         probe_id, values = fields[0], fields[1:]
-        data_rows.append(
-            [probe_id] + [float(v) if v not in ("", "NA") else None for v in values]
-        )
+        data_rows.append([probe_id] + [to_float(v) for v in values])
 
     return accession, series_rows, sample_rows, sample_columns, data_rows
 
