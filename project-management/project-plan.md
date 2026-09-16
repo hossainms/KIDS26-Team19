@@ -2,31 +2,33 @@
 
 ## Goal
 
-[What will the team understand, build, test, or demonstrate by the end of the event?]
+A reproducible and auditable pipeline that queries the GEO database for studies related to AML and harmonizes the data into a standardized spreadsheet where samples are mapped to treatments and controls.
 
 ## Tools
 
-[What tools do you plan to use for this project?]
+R
+Claude Code
+Github Copilot
 
 ## First Tasks
 
-- [ ] [Small task] - [Owner]
-- [ ] [Small task] - [Owner]
-- [ ] [Small task] - [Owner]
+- [ ] GEO Discovery & Download & Inventory - [Owner]
+- [ ] Read and structure GEO data - [Owner]
+- [ ] Harmonization & Integration - [Owner]
 
 ## Milestones
 
 
-- **Day 1:** [Question, data/inputs, stack, roles, and first working step]
-- **Day 2:** [Main build, analysis, testing, or comparison]
-- **Day 3:** [Stabilized result, documentation, demo, or handoff]
+- **Day 1:** GEO Discovery & Download & Inventory
+- **Day 2:** Read and structure GEO data
+- **Day 3:** Harmonization & Integration
 
 ## Definition of Done
 
-When is the project complete? If this is achieved early on, what would the next steps be to increase the scope?
+R shiny webpage where a user can query the site and receive an standardized output of a list of studies and samples.
 
 ## Risks and Questions
 
-- [What might block the team?]
-- [What assumption needs checking?]
-- [Who can help?]
+- Standardization issues in the studies
+- Assuming no publication bias
+- We have Dr. Stan Pounds as a consultant
