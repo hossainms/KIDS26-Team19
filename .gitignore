@@ -155,3 +155,9 @@ dmypy.json
 .pyre/
 .myenv/
 requirements.txt
+
+# Medallion data: rebuilt from bronze/manifest.csv
+bronze/geo/
+bronze/gpl/
+silver/expression/
+*.part
