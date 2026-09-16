@@ -1,4 +1,4 @@
-# Biohackathon Project Template
+# Team 19 Project
 
 This repository is a starting point for a three-day team project. This repository is populated with a starting template for team organization and planning. Use it to plan, build, and document work. Please adjust this repository to suit the needs of your team.
 
@@ -6,14 +6,14 @@ This repository is a starting point for a three-day team project. This repositor
 
 ## Project Profile
 
-- **Project name:** [Add a short, descriptive name]
-- **Question, problem, or opportunity:** [What are you exploring?]
+- **Project name:** Integrating Molecular and Clinical Trial Data to Predict AML Patient Outcomes for Novel Therapies
+- **Question, problem, or opportunity:** Harmonizing unstandardized GEO AML data to extract treatment information for prognostic scoring
 - **Data, inputs, or evidence:** [What will you use, and where does it come from?]
 - **Expected output:** [What will you show, test, explain, or demonstrate?]
 - **Tools and stack:** [Languages, libraries, notebooks, APIs, databases, services, or other tools]
-- **Team lead:** [Name and GitHub handle]
+- **Team lead:** Nobel Makonnen [SmartOval]
 - **Team members and roles:** [Link to `project-management/team.md`]
-- **Communication:** [Add the agreed channel or contact]
+- **Communication:** Team19 Slack Channel
 
 Naming the tools and stack early helps the team lead create useful roles and divide work realistically. It is fine to revise this section as the project develops.
 
