@@ -1,0 +1,3 @@
+# Please add dependencies in alphabetical order and include version numbers.
+
+duckdb==1.5.5
