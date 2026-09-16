@@ -161,3 +161,10 @@ bronze/geo/
 bronze/gpl/
 silver/expression/
 *.part
+
+# Project overrides
+#
+# The Python template block above excludes lib/ as a Python build-artifact
+# directory. This is an R project, where lib/ is a plausible location for
+# source code, so track it.
+!lib/
