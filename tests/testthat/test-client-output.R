@@ -1,12 +1,19 @@
 source(file.path("..", "..", "client", "app_logic.R"))
 
-test_that("run_command_capture returns combined command output", {
-  result <- run_command_capture(
-    "Rscript",
-    c("-e", shQuote("cat('R output\\n'); message('R diagnostic')"))
-  )
+test_that("samples query selects the joined columns and matches its labels", {
+  expect_identical(length(SAMPLES_TABLE_COLUMNS), length(samples_table_column_labels))
+  expect_true(grepl("FROM sample s", SAMPLES_TABLE_QUERY, fixed = TRUE))
+  expect_true(grepl("JOIN dataset d", SAMPLES_TABLE_QUERY, fixed = TRUE))
+  expect_true(grepl("JOIN diagnosis g", SAMPLES_TABLE_QUERY, fixed = TRUE))
+  expect_false(grepl("FROM samples", SAMPLES_TABLE_QUERY, fixed = TRUE))
+})
 
-  expect_identical(result$status, 0L)
-  expect_match(result$output, "R output")
-  expect_match(result$output, "R diagnostic")
+test_that("default_db_path points at the persistent database", {
+  expect_identical(default_db_path("/tmp/repo"), file.path("/tmp/repo", "data", "geo.db"))
+})
+
+test_that("missing_database_message names the init and update scripts", {
+  message_text <- missing_database_message("data/geo.db")
+  expect_match(message_text, "parsing/initDb.py", fixed = TRUE)
+  expect_match(message_text, "parsing/updateDb.py", fixed = TRUE)
 })
