@@ -1,8 +1,9 @@
-"""Create an empty GEO DuckDB with the fixed diagnosis/dataset schema.
+"""Create the persistent GEO DuckDB with the fixed diagnosis/dataset/sample schema.
 
-    python parsing/initDb.py --db-path data/geo.duckdb --diagnosis aml
+    python parsing/initDb.py --diagnosis aml
 
-Run once. Use parsing/updateDb.py to load series matrix files into it.
+Run this once. The resulting data/geo.db is committed to the repo; every later
+change goes through parsing/updateDb.py, which opens the same file in place.
 """
 
 from __future__ import annotations
@@ -14,11 +15,7 @@ import sys
 import duckdb
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from schema import create_schema, upsert_diagnosis  # noqa: E402
-
-DEFAULT_DB_PATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "..", "data", "geo.duckdb"
-)
+from schema import DEFAULT_DB_PATH, create_schema, upsert_diagnosis  # noqa: E402
 
 
 def init_db(db_path: str, diagnoses=(), overwrite: bool = False) -> str:
@@ -46,7 +43,11 @@ def init_db(db_path: str, diagnoses=(), overwrite: bool = False) -> str:
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--db-path", default=DEFAULT_DB_PATH)
+    parser.add_argument(
+        "--db-path",
+        default=DEFAULT_DB_PATH,
+        help="Persistent DuckDB file to create (default: %(default)s).",
+    )
     parser.add_argument(
         "--diagnosis",
         action="append",
@@ -55,7 +56,9 @@ def main(argv=None) -> int:
         help="Seed a diagnosis row; repeatable (e.g. --diagnosis aml).",
     )
     parser.add_argument(
-        "--overwrite", action="store_true", help="Delete an existing database first."
+        "--overwrite",
+        action="store_true",
+        help="Delete the existing database first; this discards all loaded data.",
     )
     args = parser.parse_args(argv)
 
@@ -66,7 +69,11 @@ def main(argv=None) -> int:
         return 1
 
     seeded = ", ".join(d.strip().lower() for d in args.diagnosis) or "none"
-    print(f"Initialized {path} (tables: diagnosis, dataset; diagnoses seeded: {seeded})")
+    print(
+        f"Initialized {path} (tables: diagnosis, dataset, sample; "
+        f"diagnoses seeded: {seeded})"
+    )
+    print("Commit this file so the whole team shares the same database.")
     return 0
 
 

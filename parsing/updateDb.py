@@ -1,11 +1,12 @@
-"""Add GEO series matrix files to an existing DuckDB built by parsing/initDb.py.
+"""Add GEO series matrix files to the persistent DuckDB created by parsing/initDb.py.
 
-    python parsing/updateDb.py downloads/geo_aml/matrices \
-        --db-path data/geo.duckdb --diagnosis aml --report logs/update_aml.txt
+    python parsing/updateDb.py downloads/geo_aml/matrices --diagnosis aml
 
-Each file is validated for the required header keys and skipped if its filename
-or series accession is already present. Skips and failures are written to the
-report (stdout by default); the exit code is 1 when any file is rejected.
+The database (data/geo.db by default) is opened in place and updated; it is
+never recreated here. Each file is validated for the required header keys and
+skipped if its filename or series accession is already present. Skips and
+failures are written to the report (stdout by default); the exit code is 1 when
+any file is rejected.
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ import duckdb
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from schema import (  # noqa: E402
+    DEFAULT_DB_PATH,
     INSERT_DATASET_SQL,
     INSERT_SAMPLE_SQL,
     MatrixError,
@@ -121,7 +123,11 @@ def update_db(
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("data_dir", help="Directory of *_series_matrix.txt(.gz) files.")
-    parser.add_argument("--db-path", required=True, help="DuckDB file to update.")
+    parser.add_argument(
+        "--db-path",
+        default=DEFAULT_DB_PATH,
+        help="Persistent DuckDB file to update (default: %(default)s).",
+    )
     parser.add_argument(
         "--diagnosis", required=True, help="Diagnosis these files belong to, e.g. aml."
     )

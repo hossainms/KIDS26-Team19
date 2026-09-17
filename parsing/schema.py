@@ -19,6 +19,12 @@ import re
 
 TABLE_BEGIN_MARKER = "!series_matrix_table_begin"
 
+# Persistent, repo-tracked database. Kept separate from data/geo.duckdb, which
+# the legacy buildDb.py deletes and rebuilds on every run.
+DEFAULT_DB_PATH = os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "geo.db")
+)
+
 WANTED_KEYS = (
     "Series_geo_accession",
     "Series_platform_id",
