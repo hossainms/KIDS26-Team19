@@ -11,7 +11,7 @@
 
 | Person | Role | Main responsibility | Backup or support needed |
 | --- | --- | --- | --- |
-| Collen | [Role] | [Responsibility] | [Support] |
+| Colleen | [Role] | [Responsibility] | [Support] |
 | Fauzan | [Role] | [Responsibility] | [Support] |
 | Pritam | [Role] | [Responsibility] | [Support] |
 | Soundharya | [Role] | [Responsibility] | [Support] |
