@@ -48,9 +48,8 @@ def iter_matrix_files(data_dir: str, recursive: bool = False):
 
 def _existing_dataset(con, source_file: str, accession: str | None):
     return con.execute(
-        "SELECT source_file FROM dataset "
-        "WHERE source_file = ? OR (? IS NOT NULL AND series_geo_accession = ?) LIMIT 1",
-        [source_file, accession, accession],
+        "SELECT source_file FROM dataset WHERE source_file = ? LIMIT 1",
+        [source_file],
     ).fetchone()
 
 
