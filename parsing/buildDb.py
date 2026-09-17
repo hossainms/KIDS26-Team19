@@ -4,11 +4,10 @@ Intended to run against the `matrices/` directory produced by
 R_Scripts/05_Download_Metadata_Inventory.R for a given diagnosis, e.g.:
     python parsing/buildDb.py downloads/geo_aml/matrices --db-path data/geo.duckdb
 
-The `samples` table is loaded straight from that run's downloaded_matrices.csv (or
-all_results.csv) report, so it reflects exactly what run_geo_pipeline() returned:
-SeriesAccession, Platform, SeriesTitle, Organism, SampleCount, Status, etc. If no
-report is found next to data_dir (e.g. when pointed at Toy-Datasets), it falls back
-to parsing the raw *_series_matrix.txt.gz files for a minimal set of fields.
+When downloaded_matrices.csv (or all_results.csv) exists next to data_dir, it is
+loaded into a `studies` table (study-level inventory from run_geo_pipeline()).
+The `samples` table is always built by parsing *_series_matrix.txt.gz files under
+data_dir for per-sample fields (series_accession, sample_geo_accession, etc.).
 """
 
 import argparse
@@ -30,6 +29,8 @@ WANTED_KEYS = (
     "Sample_geo_accession",
     "Sample_organism_ch1",
     "Sample_data_row_count",
+    "Sample_characteristics_ch1",
+    "Sample_molecule_ch1",
 )
 
 
@@ -53,13 +54,43 @@ def parse_series_matrix(path):
     series_accession = fields["Series_geo_accession"][0]
     platform_id = fields["Series_platform_id"][0]
     sample_ids = fields["Sample_geo_accession"]
-    organisms = fields["Sample_organism_ch1"]
-    row_counts = fields["Sample_data_row_count"]
+    n_samples = len(sample_ids)
 
-    return [
-        (series_accession, platform_id, sample_id, organism, int(row_count))
-        for sample_id, organism, row_count in zip(sample_ids, organisms, row_counts)
-    ]
+    def per_sample(key):
+        values = fields.get(key)
+        if not values:
+            return [None] * n_samples
+        if len(values) < n_samples:
+            values = values + [None] * (n_samples - len(values))
+        return values[:n_samples]
+
+    organisms = per_sample("Sample_organism_ch1")
+    row_counts = per_sample("Sample_data_row_count")
+    characteristics = per_sample("Sample_characteristics_ch1")
+    molecules = per_sample("Sample_molecule_ch1")
+
+    rows = []
+    for sample_id, organism, row_count, characteristic, molecule in zip(
+        sample_ids, organisms, row_counts, characteristics, molecules
+    ):
+        parsed_count = None
+        if row_count is not None and str(row_count).strip():
+            try:
+                parsed_count = int(row_count)
+            except ValueError:
+                parsed_count = None
+        rows.append(
+            (
+                series_accession,
+                platform_id,
+                sample_id,
+                organism,
+                parsed_count,
+                characteristic,
+                molecule,
+            )
+        )
+    return rows
 
 
 def find_report_path(data_dir):
@@ -72,8 +103,26 @@ def find_report_path(data_dir):
     return None
 
 
+def load_samples_from_matrices(con, data_dir):
+    con.execute(
+        "CREATE TABLE samples ("
+        "series_accession VARCHAR, series_platform_id VARCHAR, "
+        "sample_geo_accession VARCHAR, sample_organism_ch1 VARCHAR, "
+        "sample_data_row_count INTEGER, sample_characteristics_ch1 VARCHAR, "
+        "sample_molecule_ch1 VARCHAR)"
+    )
+
+    paths = sorted(glob.glob(os.path.join(data_dir, "*_series_matrix.txt.gz")))
+    for path in paths:
+        rows = parse_series_matrix(path)
+        con.executemany("INSERT INTO samples VALUES (?, ?, ?, ?, ?, ?, ?)", rows)
+        print(f"Loaded {rows[0][0]}: {len(rows)} samples")
+
+    return len(paths)
+
+
 def build_db(data_dir, db_path=None):
-    """Build the samples table for the matrices in data_dir.
+    """Build studies (optional) and samples tables for the matrices in data_dir.
 
     db_path=None keeps the database in memory; otherwise the file at db_path is
     deleted first so every build starts from a clean database.
@@ -88,23 +137,13 @@ def build_db(data_dir, db_path=None):
 
     report_path = find_report_path(data_dir)
     if report_path:
-        con.execute("CREATE TABLE samples AS SELECT * FROM read_csv_auto(?)", [report_path])
-        count = con.execute("SELECT COUNT(*) FROM samples").fetchone()[0]
-        print(f"Loaded {report_path}: {count} rows")
-        return con
+        con.execute("CREATE TABLE studies AS SELECT * FROM read_csv_auto(?)", [report_path])
+        count = con.execute("SELECT COUNT(*) FROM studies").fetchone()[0]
+        print(f"Loaded studies from {report_path}: {count} rows")
 
-    con.execute(
-        "CREATE TABLE samples ("
-        "series_accession VARCHAR, series_platform_id VARCHAR, "
-        "sample_geo_accession VARCHAR, sample_organism_ch1 VARCHAR, "
-        "sample_data_row_count INTEGER)"
-    )
-
-    paths = sorted(glob.glob(os.path.join(data_dir, "*_series_matrix.txt.gz")))
-    for path in paths:
-        rows = parse_series_matrix(path)
-        con.executemany("INSERT INTO samples VALUES (?, ?, ?, ?, ?)", rows)
-        print(f"Loaded {rows[0][0]}: {len(rows)} samples")
+    matrix_count = load_samples_from_matrices(con, data_dir)
+    sample_count = con.execute("SELECT COUNT(*) FROM samples").fetchone()[0]
+    print(f"Parsed {matrix_count} matrix file(s); {sample_count} sample row(s) in samples")
 
     return con
 

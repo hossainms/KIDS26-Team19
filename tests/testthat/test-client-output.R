@@ -1,4 +1,4 @@
-source(file.path("client", "app_logic.R"))
+source(file.path("..", "..", "client", "app_logic.R"))
 
 test_that("run_command_capture returns combined command output", {
   result <- run_command_capture(
