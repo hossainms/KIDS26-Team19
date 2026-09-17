@@ -70,8 +70,7 @@ CREATE TABLE IF NOT EXISTS dataset (
     source_file VARCHAR NOT NULL UNIQUE,
     {", ".join(
         f"{KEY_COLUMNS[key]} {_column_type(KEY_COLUMNS[key])}" for key in SERIES_KEYS
-    )},
-    UNIQUE (series_geo_accession)
+    )}
 );
 
 CREATE TABLE IF NOT EXISTS sample (
@@ -181,11 +180,22 @@ def parse_matrix(path: str, diagnosis_id: int, strict: bool = False):
     if absent:
         raise MatrixError("missing required keys: " + ", ".join(absent))
 
+    # Platform-specific matrix filenames are authoritative when present. Some
+    # GEO headers repeat the wrong or shared Series_platform_id across files in
+    # a multi-GPL study, while the filename remains platform-specific.
+    filename_platform = re.search(r"(?:^|-)GPL([0-9]+)(?:_series_matrix|$)", os.path.basename(path))
+    series_platform = (
+        f"GPL{filename_platform.group(1)}"
+        if filename_platform
+        else _scalar(fields, "Series_platform_id")
+    )
     dataset_row = (
         diagnosis_id,
         os.path.basename(path),
         *(_scalar(fields, key) for key in SERIES_KEYS),
     )
+    platform_index = SERIES_KEYS.index("Series_platform_id")
+    dataset_row = dataset_row[:2 + platform_index] + (series_platform,) + dataset_row[3 + platform_index:]
 
     n_samples = len(fields["Sample_geo_accession"])
 
