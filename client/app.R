@@ -1,6 +1,7 @@
-## Shiny app: browse sample metadata in data/geo.duckdb built upstream via parsing/buildDb.py.
-## R setup:      install.packages(c("shiny", "DT", "DBI", "duckdb"))
-## Python setup: pip install -r parsing/requirements.txt (for buildDb.py outside the app)
+## Shiny app: browse GEO sample metadata in the persistent data/geo.db.
+## R setup: install.packages(c("shiny", "DT", "DBI", "duckdb"))
+## The database is created by parsing/initDb.py and loaded by parsing/updateDb.py;
+## this app opens it read-only and never rebuilds it.
 
 library(shiny)
 library(DT)
@@ -9,37 +10,25 @@ library(duckdb)
 
 find_repo_root <- function() {
   for (candidate in c(".", "..")) {
-    if (file.exists(file.path(candidate, "parsing", "buildDb.py"))) {
+    if (file.exists(file.path(candidate, "parsing", "initDb.py"))) {
       return(normalizePath(candidate, mustWork = TRUE))
     }
   }
-  stop("Cannot locate repository root (expected parsing/buildDb.py).")
-}
-
-find_python <- function(repo_root) {
-  venv_python <- file.path(repo_root, "parsing", ".venv", "bin", "python3")
-  if (file.exists(venv_python)) venv_python else "python3"
+  stop("Cannot locate repository root (expected parsing/initDb.py).")
 }
 
 repo_root <- find_repo_root()
-python_bin <- find_python(repo_root)
-db_path <- file.path(repo_root, "data", "geo.duckdb")
 source(file.path(repo_root, "client", "app_logic.R"))
-
-diagnosis_map <- c(
-  AML = "acute myeloid leukemia",
-  ALL = "acute lymphocytic leukemia"
-)
+db_path <- default_db_path(repo_root)
 
 ui <- fluidPage(
   titlePanel("GEO Sample Explorer"),
   sidebarLayout(
     sidebarPanel(
-      selectInput("diagnosis", "Diagnosis", choices = names(diagnosis_map), selected = "AML"),
+      selectInput("diagnosis", "Diagnosis", choices = c("All diagnoses" = "")),
       helpText(
-        "Matrices and DuckDB are prepared outside this app ",
-        "(R_Scripts/05_Download_Metadata_Inventory.R and parsing/buildDb.py). ",
-        "Startup opens data/geo.duckdb if present. Changing diagnosis rebuilds from that diagnosis's cached matrices."
+        "Read-only view of data/geo.db. Add studies outside this app with ",
+        "parsing/updateDb.py, then restart to see them."
       )
     ),
     mainPanel(
@@ -51,94 +40,32 @@ ui <- fluidPage(
 )
 
 server <- function(input, output, session) {
-  con <- reactiveVal(NULL)
-  status <- reactiveVal("Ready.")
+  connection <- connect_geo_database(db_path)
+  status <- reactiveVal("")
   query_error <- reactiveVal("")
-  loading <- reactiveVal(FALSE)
-  db_env <- new.env(parent = emptyenv())
-  db_env$connection <- NULL
 
-  disconnect_db <- function() {
-    active <- db_env$connection
-    if (!is.null(active)) {
-      dbDisconnect(active, shutdown = TRUE)
-    }
-    db_env$connection <- NULL
-    con(NULL)
-  }
-
-  attach_connection <- function(connection, message_text) {
-    db_env$connection <- connection
-    con(connection)
-    query_error("")
-    status(message_text)
-    loading(FALSE)
-  }
-
-  open_existing_database <- function() {
-    existing <- connect_existing_database(db_path)
-    if (is.null(existing)) {
-      return(FALSE)
-    }
-    attach_connection(
-      existing,
-      paste0("Opened existing database: ", db_path)
+  if (is.null(connection)) {
+    status(missing_database_message(db_path))
+  } else {
+    diagnoses <- list_diagnoses(connection)
+    updateSelectInput(
+      session,
+      "diagnosis",
+      choices = c("All diagnoses" = "", stats::setNames(diagnoses, toupper(diagnoses))),
+      selected = ""
     )
-    TRUE
+    status(paste0("Opened ", db_path, " (", length(diagnoses), " diagnoses)."))
+    session$onSessionEnded(function() dbDisconnect(connection, shutdown = TRUE))
   }
-
-  rebuild_diagnosis_database <- function(diagnosis) {
-    loading(TRUE)
-    disconnect_db()
-    query_error("")
-    status(load_status_message(diagnosis, repo_root))
-
-    outcome <- tryCatch(
-      {
-        result <- build_database_from_cache(diagnosis, repo_root, python_bin, db_path)
-        list(ok = TRUE, output = result$output)
-      },
-      error = function(e) list(ok = FALSE, error = conditionMessage(e))
-    )
-
-    if (outcome$ok) {
-      attach_connection(
-        connect_existing_database(db_path),
-        paste(outcome$output, collapse = "\n")
-      )
-    } else {
-      loading(FALSE)
-      status(paste0("Failed to load '", diagnosis, "': ", outcome$error))
-    }
-  }
-
-  diagnosis_initialized <- reactiveVal(FALSE)
-
-  observeEvent(input$diagnosis, {
-    if (!diagnosis_initialized()) {
-      diagnosis_initialized(TRUE)
-      if (open_existing_database()) {
-        return()
-      }
-      rebuild_diagnosis_database(input$diagnosis)
-      return()
-    }
-    rebuild_diagnosis_database(input$diagnosis)
-  }, ignoreInit = FALSE)
-
-  session$onSessionEnded(function() {
-    active <- db_env$connection
-    if (!is.null(active)) {
-      dbDisconnect(active, shutdown = TRUE)
-    }
-    db_env$connection <- NULL
-  })
 
   results <- reactive({
-    active <- con()
-    req(active)
+    req(!is.null(connection))
     tryCatch(
-      fetch_samples_table(active),
+      {
+        rows <- fetch_samples_table(connection, input$diagnosis)
+        query_error("")
+        rows
+      },
       error = function(e) {
         query_error(conditionMessage(e))
         NULL
@@ -147,27 +74,28 @@ server <- function(input, output, session) {
   })
 
   output$state <- renderText({
-    if (isTRUE(isolate(loading()))) {
-      return(isolate(status()))
+    if (is.null(connection)) {
+      return("No database loaded.")
     }
-    if (nzchar(isolate(query_error()))) {
-      return(paste0("Database query error: ", isolate(query_error())))
+    if (nzchar(query_error())) {
+      return(paste0("Database query error: ", query_error()))
     }
-    if (is.null(isolate(con()))) {
-      return(isolate(status()))
+    rows <- results()
+    if (is.null(rows)) {
+      return("Database loaded.")
     }
-    "Database loaded. Browse samples below."
+    paste0("Database loaded. ", nrow(rows), " sample rows.")
   })
 
   output$message <- renderText({ status() })
 
   output$results <- renderDT({
+    validate(need(!is.null(connection), missing_database_message(db_path)))
     tbl <- results()
-    query_err <- query_error()
-    if (!is.null(query_err) && nzchar(query_err)) {
-      validate(need(FALSE, paste0("Could not read samples table:\n", query_err)))
+    if (nzchar(query_error())) {
+      validate(need(FALSE, paste0("Could not read samples:\n", query_error())))
     }
-    validate(need(!is.null(tbl), "No sample rows to display yet."))
+    validate(need(!is.null(tbl) && nrow(tbl) > 0L, "No sample rows to display."))
     characteristics_idx <- which(names(tbl) == "sample_characteristics_ch1") - 1L
     column_defs <- list()
     if (length(characteristics_idx) == 1L && characteristics_idx >= 0L) {
