@@ -275,6 +275,29 @@ download_geo_matrices <- function(inventory, dest_dir, overwrite = FALSE,
   result
 }
 
+# Diagnosis abbreviation to full name, shared with 01_get_AML_GEO_candidates.R.
+GEO_DIAGNOSIS_MAP <- c(
+  AML = "acute myeloid leukemia",
+  ALL = "acute lymphocytic leukemia"
+)
+
+# Build the DMSO/vehicle query strings for a supported diagnosis abbreviation.
+geo_diagnosis_query_strings <- function(abbreviation, diagnosis_map = GEO_DIAGNOSIS_MAP) {
+  if (!abbreviation %in% names(diagnosis_map)) {
+    stop(
+      "Unsupported diagnosis '", abbreviation, "'. Supported values: ",
+      paste(names(diagnosis_map), collapse = ", ")
+    )
+  }
+  full_name <- diagnosis_map[[abbreviation]]
+  c(
+    paste(abbreviation, "DMSO"),
+    paste0("\"", full_name, "\" DMSO"),
+    paste(abbreviation, "vehicle"),
+    paste0("\"", full_name, "\" vehicle")
+  )
+}
+
 # Build a query from literal words/phrases; use query_strings directly for complex
 # Entrez expressions, e.g. '(AML OR "acute myeloid leukemia") AND (DMSO OR vehicle)'.
 geo_keyword_query <- function(keywords, match = c("all", "any"), organism = NULL) {
@@ -481,8 +504,17 @@ discover_geo_by_keywords <- function(query_strings, keywords = character(),
 # Every validated file is checkpointed, not just each completed study.
 run_geo_pipeline <- function(input = "GSE_Metadata_Inventory.xlsx",
                              out_dir = "downloads/geo_metadata_inventory",
-                             query_strings = NULL, keywords = character(),
+                             query_strings = NULL, diagnosis = NULL, keywords = character(),
                              max_studies_per_query = Inf, retries = 1L) {
+  if (!is.null(query_strings) && !is.null(diagnosis)) {
+    stop("Provide either query_strings or diagnosis, not both.")
+  }
+  if (is.null(query_strings) && !is.null(diagnosis)) {
+    query_strings <- geo_diagnosis_query_strings(diagnosis)
+    if (!length(keywords)) {
+      keywords <- c(diagnosis, GEO_DIAGNOSIS_MAP[[diagnosis]], "DMSO", "vehicle")
+    }
+  }
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
   out_dir <- normalizePath(out_dir, mustWork = TRUE)
   matrix_dir <- file.path(out_dir, "matrices")
@@ -583,18 +615,22 @@ run_geo_pipeline <- function(input = "GSE_Metadata_Inventory.xlsx",
 .geo_main <- function(args = commandArgs(trailingOnly = TRUE)) {
   if (length(args) && args[1] == "--help") {
     cat("Workbook: Rscript 05_Download_Metadata_Inventory.R [input.xlsx] [output_directory]\n",
-        "Search:   Rscript 05_Download_Metadata_Inventory.R --query 'AML AND DMSO' --out downloads/geo_search\n",
-        "Optional search arguments: --keywords 'AML,DMSO' --max-studies 10\n")
+        "Search:   Rscript 05_Download_Metadata_Inventory.R --query '<condition> AND DMSO' --out downloads/geo_search\n",
+        paste0("Diagnosis: Rscript 05_Download_Metadata_Inventory.R --diagnosis <",
+               paste(names(GEO_DIAGNOSIS_MAP), collapse = "|"), "> --out downloads/geo_search\n"),
+        "Optional search arguments: --keywords '<term1>,<term2>' --max-studies 10\n")
     return(invisible(NULL))
   }
-  if (length(args) && args[1] == "--query") {
+  if (length(args) && args[1] %in% c("--query", "--diagnosis")) {
     if (length(args) %% 2L != 0L || any(!args[seq(1L, length(args), 2L)] %in%
-                                        c("--query", "--out", "--keywords", "--max-studies"))) stop("Invalid arguments; use --help.")
+                                        c("--query", "--diagnosis", "--out", "--keywords", "--max-studies"))) stop("Invalid arguments; use --help.")
     options <- setNames(as.list(args[seq(2L, length(args), 2L)]), args[seq(1L, length(args), 2L)])
     get_option <- function(key, default) if (is.null(options[[key]])) default else options[[key]]
+    keyword_option <- get_option("--keywords", "")
     run_geo_pipeline(query_strings = options[["--query"]],
+                     diagnosis = options[["--diagnosis"]],
                      out_dir = get_option("--out", "downloads/geo_search"),
-                     keywords = strsplit(get_option("--keywords", ""), ",", fixed = TRUE)[[1]],
+                     keywords = if (nzchar(keyword_option)) strsplit(keyword_option, ",", fixed = TRUE)[[1]] else character(),
                      max_studies_per_query = as.numeric(get_option("--max-studies", "Inf")))
   } else {
     if (length(args) > 2L) stop("Invalid arguments; use --help.")

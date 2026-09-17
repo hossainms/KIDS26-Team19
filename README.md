@@ -36,4 +36,12 @@ Naming the tools and stack early helps the team lead create useful roles and div
 
 The goal is not a perfect production system. The goal is a clear, honest, useful result that the team can explain and others can build on.
 
+## Project Setup
+_This section contains draft content. Please check back towards the end of the project._
+
+To install python dependencies, run from the root:
+```
+pip install -r parsing/requirement.txt
+```
+
 
