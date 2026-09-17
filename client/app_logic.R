@@ -83,6 +83,7 @@ build_database_from_cache <- function(diagnosis, repo_root, python_bin, db_path)
 SAMPLES_TABLE_COLUMNS <- c(
   "series_accession",
   "series_platform_id",
+  "series_pubmed_id",
   "sample_geo_accession",
   "sample_organism_ch1",
   "sample_data_row_count",
@@ -100,6 +101,7 @@ SAMPLES_TABLE_QUERY <- paste(
 samples_table_column_labels <- c(
   "Series",
   "Platform",
+  "PubMed ID",
   "Sample",
   "Organism",
   "Row count",

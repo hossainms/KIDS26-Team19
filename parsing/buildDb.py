@@ -31,6 +31,7 @@ WANTED_KEYS = (
     "Sample_data_row_count",
     "Sample_characteristics_ch1",
     "Sample_molecule_ch1",
+    "Series_pubmed_id",
 )
 
 
@@ -53,6 +54,10 @@ def parse_series_matrix(path):
 
     series_accession = fields["Series_geo_accession"][0]
     platform_id = fields["Series_platform_id"][0]
+    pubmed_raw = fields.get("Series_pubmed_id")
+    series_pubmed_id = (
+        pubmed_raw[0] if pubmed_raw and str(pubmed_raw[0]).strip() else None
+    )
     sample_ids = fields["Sample_geo_accession"]
     n_samples = len(sample_ids)
 
@@ -83,6 +88,7 @@ def parse_series_matrix(path):
             (
                 series_accession,
                 platform_id,
+                series_pubmed_id,
                 sample_id,
                 organism,
                 parsed_count,
@@ -107,6 +113,7 @@ def load_samples_from_matrices(con, data_dir):
     con.execute(
         "CREATE TABLE samples ("
         "series_accession VARCHAR, series_platform_id VARCHAR, "
+        "series_pubmed_id VARCHAR, "
         "sample_geo_accession VARCHAR, sample_organism_ch1 VARCHAR, "
         "sample_data_row_count INTEGER, sample_characteristics_ch1 VARCHAR, "
         "sample_molecule_ch1 VARCHAR)"
@@ -115,7 +122,7 @@ def load_samples_from_matrices(con, data_dir):
     paths = sorted(glob.glob(os.path.join(data_dir, "*_series_matrix.txt.gz")))
     for path in paths:
         rows = parse_series_matrix(path)
-        con.executemany("INSERT INTO samples VALUES (?, ?, ?, ?, ?, ?, ?)", rows)
+        con.executemany("INSERT INTO samples VALUES (?, ?, ?, ?, ?, ?, ?, ?)", rows)
         print(f"Loaded {rows[0][0]}: {len(rows)} samples")
 
     return len(paths)
