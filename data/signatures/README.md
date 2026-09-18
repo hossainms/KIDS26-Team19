@@ -35,8 +35,13 @@ verbatim:
 
 Every score computed before this correction was wrong, and nothing in the output would
 have indicated it. This is the reason the `verified` flag and the refusal in
-`score_lsc()` exist, and the reason LSC17 must not be used until someone repeats this
-exercise against the Nature paper.
+`score_lsc()` exist, and the reason the LSC17 **coefficients** must not be used until
+someone repeats this exercise against the Nature paper.
+
+**This restricts the weighted sum only.** A rank-based (singscore) enrichment uses gene
+membership and never touches the coefficients, so LSC17 and LSC18 are safe to use there and
+every reported LSC17/LSC18 result comes from that path. `score_lsc(sig = "LSC17")` still
+errors by design; `sing_score()` does not.
 
 ### LSC17 still needs a human
 

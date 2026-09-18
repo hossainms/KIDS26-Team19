@@ -1,9 +1,10 @@
 #!/usr/bin/env Rscript
 # Score every array-based study in the bronze corpus that has a drug and a control arm.
 #
-# Sequencing studies are excluded: a GEO series matrix for an RNA-seq submission holds
-# metadata only, with counts in per-study supplementary files. Reaching those needs a
-# uniformly reprocessed source such as ARCHS4 or recount3, which is separate work.
+# Sequencing studies are excluded here: a GEO series matrix for an RNA-seq submission
+# holds metadata only, with counts in per-study supplementary files. They are covered by
+# R/score_ncbi_corpus.R, which reads the counts NCBI recomputes for GEO2R-flagged series.
+# ARCHS4 or recount3 would extend that further and remain separate work.
 #
 # Resumable:each study writes its own result file and is skipped on a rerun.
 #

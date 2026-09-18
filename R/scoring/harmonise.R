@@ -10,8 +10,8 @@ TREAT_KEYS <- "^(drug treatment|agent|treatment|cell type treatment|compound|per
 LINE_KEYS  <- "^(cell line|cell type|cell_line)$"
 # Some studies record the biology that matters in a genotype field instead of a cell
 # line, and some put the line only in the sample title. Both are worth recovering: a
-# DOT1L inhibitor is expected to act in MLL-rearranged cells and not in wild type, and
-# collapsing that distinction hides the result.
+# menin-MLL inhibitor is expected to act in KMT2A-rearranged cells and not in wild type,
+# and collapsing that distinction hides the result.
 GENO_KEYS  <- "^(genotype|mutation|subtype|karyotype)$"
 KNOWN_LINES <- c("THP-?1","HL-?60","KG-?1a?","MOLM-?1[346]","MV4-?11","U-?937","NB4",
                  "OCI-?AML-?\\d+","Kasumi-?\\d+","K-?562","SKM-?1","ME-?1","TF-?1",
