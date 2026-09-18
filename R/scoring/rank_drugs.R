@@ -19,7 +19,11 @@ source(file.path("R", "lsc_scores.R"))
 args   <- commandArgs(trailingOnly = TRUE)
 in_dir <- if (length(args) >= 1) args[1] else "Toy-Datasets"
 SIG    <- if (length(args) >= 2) args[2] else "pLSC6"
+# Output prefix. Defaults to the pilot names; pass a prefix to keep corpus-scale runs
+# from overwriting them (e.g. "corpus_" -> results/corpus_drug_ranking.csv).
+PFX    <- if (length(args) >= 3) args[3] else ""
 OUT    <- "results"
+on <- function(name) file.path(OUT, paste0(PFX, name))
 
 source(file.path("R", "harmonise.R"))
 
@@ -80,7 +84,7 @@ scored$ScoreZ <- ave(scored$Score, scored$GSE, FUN = function(v) {
 })
 
 dir.create(OUT, showWarnings = FALSE)
-write.csv(scored, file.path(OUT, "sample_scores.csv"), row.names = FALSE)
+write.csv(scored, on("sample_scores.csv"), row.names = FALSE)
 
 # ---- rank ------------------------------------------------------------------
 
@@ -118,7 +122,7 @@ if (!length(rank_rows)) stop("No study had both a treated and a control arm.", c
 rk <- do.call(rbind, rank_rows)
 rk <- rk[order(rk$DeltaZ), ]
 rk$DeltaZ <- round(rk$DeltaZ, 3)
-write.csv(rk, file.path(OUT, "drug_ranking.csv"), row.names = FALSE)
+write.csv(rk, on("drug_ranking.csv"), row.names = FALSE)
 
 cat("\n=== Agents ranked by shift in", SIG, "versus their own study control ===\n")
 cat("    negative = drug lowers the stemness score (the direction of interest)\n\n")
@@ -131,7 +135,7 @@ agg <- agg[order(agg$DeltaZ), ]
 cat("\n=== Collapsed across strata ===\n\n")
 print(agg, row.names = FALSE)
 
-png(file.path(OUT, "drug_ranking.png"), width = 1500, height = 950, res = 175)
+png(on("drug_ranking.png"), width = 1500, height = 950, res = 175)
 op <- par(mar = c(5, 13, 4, 2))
 cols <- ifelse(agg$DeltaZ < 0, "#2D6A4F", "#A8202B")
 bp <- barplot(agg$DeltaZ, horiz = TRUE, names.arg = agg$Agent, las = 1, col = cols,
@@ -144,5 +148,5 @@ mtext(sprintf("%d contrasts across %d studies; negative favours loss of stemness
       col = "#5A6475")
 par(op); dev.off()
 
-cat(sprintf("\nWrote %s/sample_scores.csv, %s/drug_ranking.csv, %s/drug_ranking.png\n",
-            OUT, OUT, OUT))
+cat(sprintf("\nWrote %s, %s, %s\n",
+            on("sample_scores.csv"), on("drug_ranking.csv"), on("drug_ranking.png")))

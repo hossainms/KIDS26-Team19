@@ -102,6 +102,22 @@ run_set <- function(nm) {
 res <- lapply(names(SETS), run_set); names(res) <- names(SETS)
 saveRDS(res, file.path("results","singscore_tests.rds"))
 
+# Per-contrast table for the primary set. Figure 3 reads this, so it has to be written
+# here rather than assembled by hand: keys are "GSE|CellLine|Agent".
+write_ranking <- function(nm, out) {
+  a <- res[[nm]]
+  k <- do.call(rbind, strsplit(a$keys, "|", fixed = TRUE))
+  d <- data.frame(GSE = k[,1], Line = k[,2], Agent = k[,3],
+                  est = as.numeric(a$obs), null_p = as.numeric(a$null_p),
+                  src = a$src, stringsAsFactors = FALSE)
+  d$q <- stats::p.adjust(d$null_p, "BH")
+  d <- d[order(d$est), ]
+  write.csv(d, file.path("results", out), row.names = FALSE)
+  cat(sprintf("Wrote results/%s (%d contrasts, %d surviving q<0.10)\n",
+              out, nrow(d), sum(d$q < 0.10)))
+}
+write_ranking("LSC18", "lsc18_singscore_ranking.csv")
+
 cat("\n=== weighted sum versus rank-based enrichment, same contrasts and null ===\n\n")
 cat(sprintf("%-8s %5s %10s %9s %11s %9s %9s\n",
             "set","genes","contrasts","beat null","expected","BH q<.10","global P"))

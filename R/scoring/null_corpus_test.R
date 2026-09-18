@@ -2,7 +2,7 @@
 # Permutation test across the corpus: do the 95 contrasts depend on pLSC6 specifically,
 # or would any six genes with these weights produce them?
 #
-# Same design as R/null_signature_test.R, run on the 37 corpus studies. Each study's
+# Run on the 37 corpus studies (supersedes the 4-study pilot test, see git history). Each study's
 # null draws the same number of genes the observed signature had in that study, so
 # 5-gene studies are compared against 5-gene nulls.
 #
