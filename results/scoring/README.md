@@ -24,7 +24,7 @@ below the gene-coverage threshold.
 | --- | --- |
 | `plsc6_target_km.pdf` / `.png` | Survival by pLSC6 group, 351 TARGET-AML patients. The score means something in patients. |
 | `figure_null_tests.pdf` / `.png` | The diagnosis, three panels against one null. **A** survival, specific. **B** 95 array contrasts, not specific. **C** 162 RNA-seq contrasts, same answer on independent data. |
-| `figure_singscore.pdf` / `.png` | The recovery. **A** contrasts surviving FDR: 0 by weighted sum, 6 / 23 / 31 rank-based. **B** the 20 agents that lower the score. |
+| `figure_singscore.pdf` / `.png` | The recovery. **A** contrasts surviving FDR: 0 by weighted sum, 6 / 23 / 31 rank-based. **B** the 20 contrasts that lower the score, from 11 distinct agents. |
 
 Vector PDFs with 600 dpi PNG companions. Figures 2 and 3 are a pair: 2 is the diagnosis, 3 is
 what was done about it. Showing 2 alone reads as a null result.
